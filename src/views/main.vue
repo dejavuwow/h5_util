@@ -17,11 +17,11 @@
 				<div class="p_head"></div>
 				<div class="p_name">幸运大转盘</div>
 				<div class="main_content" :style="phoneTheme">
-					<div class="logo_img">
+					<vue-drag-resize class="logo_img" :isActive="false" :w="200" :h="200" >
 						<img src="../assets/image/hhd.png" alt="">
 						<label for="file"><span>+</span></label>
 						<input id="file" title="" type="file">
-					</div>
+					</vue-drag-resize>
 					<div class="logo">
 						<div class="logo_main">商户名称</div>
 					</div>
