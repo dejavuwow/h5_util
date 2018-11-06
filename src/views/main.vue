@@ -1,7 +1,13 @@
 <template>
 	<div class="left_content">
-		<el-tabs v-model="current" type="card" @tab-click="handleClick" stretch class="tabs">
+		<el-tabs v-model="current" type="card" stretch class="tabs">
 			<el-tab-pane label="活动页面" name="item">
+				<ul class="page_item">
+					<li v-for="i in itemList" :data-id="i.id" @click="showItem(i.id)">
+						<div></div>
+						<span>{{i.title}}</span>
+					</li>
+				</ul>
 			</el-tab-pane>
 			<el-tab-pane label="页面主题" name="theme">
 				<ul class="theme_page">
@@ -17,34 +23,49 @@
 				<div class="p_head"></div>
 				<div class="p_name">幸运大转盘</div>
 				<div class="main_content" :style="phoneTheme">
-					<vue-drag-resize class="logo_img" :isActive="false" :w="200" :h="200" >
-						<img src="../assets/image/hhd.png" alt="">
-						<label for="file"><span>+</span></label>
-						<input id="file" title="" type="file">
+					<vue-drag-resize @resizing="resize_logo_img" @dragging="resize_logo_img" class="logo_img" :isActive="false" :w="toBeSend.logo_img.width" :h="toBeSend.logo_img.height" :x="toBeSend.logo_img.left" :y="toBeSend.logo_img.top" @dblclick.native="displayControl.logo_img = true">
+						<my-upload field="img"
+								   :value.sync="show"
+								   @crop-success="load_logo_img"
+								   @src-file-set="getFile"
+								   v-model="displayControl.logo_img"
+								   :width="30"
+								   :height="30"
+								   ></my-upload>
+						<label><span>+</span></label>
+						<img :src="toBeSend.logo_img.img" alt="">
+						<span ></span>
 					</vue-drag-resize>
-					<div class="logo">
-						<div class="logo_main">商户名称</div>
+					<div class="logo" contenteditable="true" @keyup="bindTitleText($event)">
+						<div class="logo_main">{{toBeSend.logo.content}}</div>
 					</div>
-					<div class="rule_img">
-						<img src="../assets/image/rule.png" alt="">
-						<label for="rule"><span>+</span></label>
-						<input id="rule" title="" type="file">
-					</div>
-					<div class="rule_modal">
+					<vue-drag-resize @resizing="resize_rule_img" @dragging="resize_rule_img" class="rule_img" :x="toBeSend.rule_img.left" :y="toBeSend.rule_img.top" :isActive="false" :w="toBeSend.rule_img.width" :h="toBeSend.rule_img.height" @dblclick.native="displayControl.rule_img = true">
+						<my-upload field="img"
+								   @crop-success="load_rule_img"
+								   v-model="displayControl.rule_img"
+								   :width="30"
+								   :height="30"
+								   ></my-upload>
+						<label><span>+</span></label>
+						<img :src="toBeSend.rule_img.img" alt="">
+					</vue-drag-resize>
+					<div class="rule_modal" v-show="isShow">
 						<div class="rule_wrap">
 							<p>活动说明</p>
-							<div>
-								<p class="rule_text">请填入活动时间、活动说明、相关规则、客服电话等告知参与者的信息，以上信息消费者可在手机页面下的活动规则中查看</p>
+							<div :contenteditable="edit.rule" @click="edit.rule = true" @keyup="bindRuleText($event)">
+								<p class="rule_text" >{{toBeSend.ruleContent}}</p>
 							</div>
 							<button class="confirm">确定</button>
 						</div>
 					</div>
-					<div class="roller">
-						<div><span></span><span></span></div>
-						<div><span></span><span></span></div>
-						<div><span></span><span></span></div>
-						<div><span></span><span></span></div>
-					</div>
+					<vue-drag-resize @resizing="resize_roller" @dragging="resize_roller" :x="toBeSend.roller.left" :y="toBeSend.roller.top" :isActive="false" :w="toBeSend.roller.width" :h="toBeSend.roller.height" :isResizable="false">
+						<div class="roller">
+							<div><span></span><span></span></div>
+							<div><span></span><span></span></div>
+							<div><span></span><span></span></div>
+							<div><span></span><span></span></div>
+						</div>
+					</vue-drag-resize>
 				</div>
 				<div class="phone_bottom"></div>
 			</div>
@@ -52,12 +73,30 @@
 	</div>
 </template>
 <script>
+import myUpload from 'vue-image-crop-upload';
+import $ from "jquery";
 export default {
 	name:'main_content',
+	components: {
+		'my-upload': myUpload
+	},
 	data() {
 		return {
+			isShow:false,
+			edit:{
+				store_name:false,
+				rule:false
+			},
+			show:true,
 			current: 'item',
-			baseUrl: process.env.BASE_URL,
+			itemList:[
+				{title:'活动首页',id:'index'},
+				{title:'活动规则',id:'rule'}
+			],
+			displayControl:{
+				logo_img:false,
+				rule_img:false,
+			},
 			themeList:[
 				{text:'主题1',img:require('../assets/image/theme1.jpg'),active:true},
 				{text:'主题2',img:require('../assets/image/theme2.jpg'),active:false},
@@ -65,29 +104,160 @@ export default {
 				{text:'主题4',img:require('../assets/image/theme4.jpg'),active:false},
 				{text:'主题5',img:require('../assets/image/theme5.jpg'),active:false},
 			],
-			activeImage:require('../assets/image/theme1.jpg'),
+			toBeSend:{
+				background_image:require('../assets/image/theme1.jpg'),
+				ruleContent:'请填入活动时间、活动说明、相关规则、客服电话等告知参与者的信息，以上信息消费者可在手机页面下的活动规则中查看',
+				logo_img:{
+					height:50,
+					width:50,
+					top:0,
+					left:0,
+					img:require('../assets/image/hhd.png')
+				},
+				logo:{
+					height:30,
+					width:100,
+					top:20,
+					left:80,
+					content:'商户名称'
+				},
+				rule_img:{
+					height:30,
+					width:70,
+					top:10,
+					left:250,
+					img:require('../assets/image/rule.png')
+				},
+				roller:{
+					height:270,
+					width:270,
+					top:250,
+					left:30
+				}
+			}
+
 		};
 	},
 	computed:{
 		phoneTheme(){
 			return {
-				backgroundImage:`url(${this.activeImage})`
+				backgroundImage:`url(${this.toBeSend.background_image})`
 			}
 		}
 	},
 	methods: {
+		getFile(fileName, fileType, fileSize){
+		},
+		//监听输入事件，绑定输入的活动规则内容到对象中
+		bindRuleText(e) {
+			this.toBeSend.ruleContent = e.target.textContent;
+		},
+		bindTitleText(e) {
+			this.toBeSend.logo.content = e.target.textContent;
+		},
+
+		//控制页面元素的显示状态
+		showItem(id) {
+			switch(id) {
+				case 'index':
+					this.isShow = false;
+					break;
+				case 'rule':
+					this.isShow = true;
+					break;
+			}
+		},
+		BindPageSnapshot() {
+			$('.page_item li').map((k, v) => {
+				let modal = document.createElement('div');
+				modal = $(modal).css({
+					'height':'100%',
+					'width':'100%',
+					'position':'absolute',
+					'top':'0',
+					'left':'0',
+					'z-index':'999',
+					'background-color':'transparent'
+				});
+				let node;
+				switch(v.dataset.id) { //根据元素绑定的data-id判断页面的快照内容
+
+					case 'index'://首页
+						node = $('.main_content')[0].cloneNode(true);
+						$(node).find('.roller').css('animation-play-state', 'paused'); //将快照内的动画停止
+						$(node).append(modal); //给快照页面加入modal层，屏蔽元素
+						$(node).find('.rule_modal').css('display','none');
+						$(node).prependTo($(v).children('div'));
+						break;
+
+					case 'rule'://活动规则说明
+						node = $('.main_content')[0].cloneNode(true);
+						$(node).find('.roller').css('animation-play-state', 'paused');
+						$(node).append(modal);
+						$(node).find('.rule_modal').css('display','flex');
+						$(node).prependTo($(v).children('div'));
+						break;
+				}
+			})
+		},
+		load_logo_img(imgDataUrl, field){
+			console.log(field)
+			this.toBeSend.logo_img.img = imgDataUrl;
+		},
+		load_rule_img(imgDataUrl, field) {
+			this.toBeSend.rule_img.img = imgDataUrl;
+		},
 		selectTheme(item) {
 			for (let i of this.themeList) {
 				i.active = false;
 			}
-			this.activeImage = item.img;
+			this.toBeSend.background_image = item.img;
 			item.active = true;
+			$(".page_item li .main_content").css('background-image',`url(${item.img})`);
 		},
-		handleClick(tab, event) {
-			console.log(tab, event);
+		bindEvent() {
+			this.$bus.$on('actionSave',() => {
+				console.log(this.toBeSend);
+				console.log('save');
+			});
+			this.$bus.$on('actionPreview',() => {
+				console.log('preview');
+			})
+		},
+
+		//获取调整过的元素的位置和大小
+		resize_logo_img(element) {
+			const target = this.toBeSend.logo_img;
+			target.height = element.height;
+			target.width = element.width;
+			target.top = element.top;
+			target.left = element.left;
+		},
+
+		resize_logo(element) {
+			const target = this.toBeSend.logo;
+			target.height = element.height;
+			target.width = element.width;
+			target.top = element.top;
+			target.left = element.left;
+		},
+		resize_rule_img(element) {
+			const target = this.toBeSend.rule_img;
+			target.height = element.height;
+			target.width = element.width;
+			target.top = element.top;
+			target.left = element.left;
+		},
+		resize_roller(element) {
+			const target = this.toBeSend.roller;
+			target.top = element.top;
+			target.left = element.left;
 		}
 	},
-	created() {
+	mounted() {
+		this.BindPageSnapshot();
+		this.bindEvent();
+		console.log(this)
 	}
 }
 </script>
@@ -166,8 +336,8 @@ export default {
 		top:20px;
 		left:80px;
 		outline: none;
-		height:30px;
-		width:100px;
+		min-height:30px;
+		min-width:100px;
 		border:1px solid transparent;
 	}
 	.logo:hover{
@@ -265,7 +435,6 @@ export default {
 		text-align: center;
 		z-index:200;
 		position:absolute;
-		display:none;
 	}
 	.rule_wrap{
 		position: relative;
@@ -285,6 +454,7 @@ export default {
 		color:#fff;
 	}
 	.rule_wrap div{
+		text-align:left;
 		height:130px;
 		box-sizing:border-box;
 		width:100%;
@@ -329,9 +499,6 @@ export default {
 		height:270px;
 		border-radius:135px;
 		border:2px solid orange;
-		position:absolute;
-		bottom:20px;
-		left:8%;
 		cursor:move;
 		animation:rollAnimation 8s linear 1s infinite;
 	}
@@ -378,5 +545,37 @@ export default {
 			transform:rotateZ(360deg);
 		}
 	}
+}
+.page_item li{
+	margin-right: 10px;
+	cursor: pointer;
+	height: 180px;
+	width: 100px;
+	float: left;
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
+	div{
+		height:165px;
+
+	}
+	span{
+		display:block;
+		text-align:center;
+	}
+
+}
+.page_item li .main_content{
+	transform:scale(0.3);
+	transform-origin:left top;
+}
+</style>
+<style>
+.left_content .theme_page li {
+	cursor: pointer;
+	height: 180px;
+	width: 100px;
+	float: left;
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
 }
 </style>

@@ -6,6 +6,11 @@ import './assets/sass/reset.scss'
 import 'font-awesome/css/font-awesome.css'
 import { Tabs, TabPane } from 'element-ui'
 import VueDragResize from 'vue-drag-resize'
+import 'vue-resize/dist/vue-resize.css'
+import VueResize from 'vue-resize'
+Vue.use(VueResize)
+const bus = new Vue;
+Object.assign(Vue.prototype,{'$bus':bus});
 Vue.component('vue-drag-resize', VueDragResize)
 Vue.config.productionTip = false
 Vue.use(Tabs);

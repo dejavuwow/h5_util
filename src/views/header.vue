@@ -1,7 +1,7 @@
 <template>
 	<div class="header">
 		<ul>
-			<li v-for="(item, index) in actionList">
+			<li v-for="(item, index) in actionList" @click="action(item.title)">
 				<i :class="item.icon"></i>
 				<span>{{item.title}}</span>
 			</li>
@@ -19,7 +19,19 @@ export default {
 				{title:'发布',icon:'fa fa-paper-plane'},
 			],
 		};
-	}
+	},
+	methods:{
+		action(title) {
+			switch(title) {
+				case '预览':
+					this.$bus.$emit('actionPreview');
+					break;
+				case '保存':
+					this.$bus.$emit('actionSave');
+					break;
+			}
+		}
+	},
 }
 </script>
 <style lang="scss">
